@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Stock Price Management System | Live API + Alpha Vantage</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-container">
+  <div class="header">
+    <h1>📈 Stock Price Management System</h1>
+    <p>Array · Object Structure | Live Market API (Yahoo Finance + Alpha Vantage) | Add, Update, Search & Real-time Sync</p>
+  </div>
+
+  <div class="card">
+    <h2>📊 Stock Operations + Live Market Data</h2>
+    <div class="grid-3col">
+      <!-- ADD STOCK SECTION -->
+      <div class="form-panel">
+        <h3 style="margin-bottom: 1rem;">➕ Add New Stock</h3>
+        <div class="input-group">
+          <label>🏢 Company Name</label>
+          <input type="text" id="companyName" placeholder="e.g., NVIDIA Corp" autocomplete="off">
+        </div>
+        <div class="input-group">
+          <label>💵 Stock Price (USD)</label>
+          <input type="number" id="stockPrice" step="0.01" placeholder="e.g., 825.50">
+        </div>
+        <div class="input-group">
+          <label>📊 Symbol (for live fetch)</label>
+          <input type="text" id="stockSymbol" placeholder="e.g., NVDA, AAPL, TSLA">
+        </div>
+        <button id="addStockBtn">➕ Add Stock</button>
+        <button id="resetDemoBtn" class="btn-outline">⟳ Reset Demo</button>
+      </div>
+
+      <!-- SEARCH SECTION -->
+      <div class="search-panel">
+        <h3 style="margin-bottom: 1rem;">🔍 Search Stock</h3>
+        <div class="input-group">
+          <label>Company Name (partial/full)</label>
+          <input type="text" id="searchInput" placeholder="e.g., Apple, Microsoft" autocomplete="off">
+        </div>
+        <button id="searchBtn">🔎 Search</button>
+        <button id="resetSearchBtn" class="btn-outline">Show All</button>
+        <div id="searchFeedback" style="margin-top: 0.8rem; font-size: 0.85rem; color: #2c7da0;"></div>
+      </div>
+
+      <!-- LIVE API PANEL -->
+      <div class="api-panel">
+        <h3 style="margin-bottom: 1rem;">🌐 Live Market Price</h3>
+        <div class="input-group">
+          <label>Stock Symbol (e.g., AAPL, MSFT, TSLA, NVDA)</label>
+          <input type="text" id="liveSymbolInput" placeholder="Enter symbol for live price" autocomplete="off">
+        </div>
+        <button id="fetchLivePriceBtn" class="api-fetch-btn">⚡ Fetch Current Price</button>
+        <button id="updateSelectedStockBtn" class="btn-secondary">🔄 Update Selected Stock</button>
+        <div id="livePriceResult" style="margin-top: 1rem; background:#eef3f7; border-radius: 24px; padding: 0.8rem 1rem;">
+          <span style="font-weight:600;">💹 Live quote:</span> 
+          <span id="liveQuoteDisplay">—</span>
+        </div>
+        <div class="input-group" style="margin-top:0.5rem;">
+          <label>Select Stock to Update</label>
+          <select id="stockSelectForUpdate" style="padding:0.6rem; border-radius:40px;">
+            <option value="">-- Choose stock --</option>
+          </select>
+        </div>
+        
+        <!-- API KEY SECTION (Alpha Vantage Support) -->
+        <div class="api-key-section">
+          <h4>🔑 Alpha Vantage API Key (Optional, for better rate limits)</h4>
+          <div class="key-input-group">
+            <input type="text" id="alphaVantageApiKey" placeholder="Enter your API key (e.g., demo or free key)" autocomplete="off">
+            <button id="saveApiKeyBtn" class="small-btn">💾 Save Key</button>
+            <button id="useDemoKeyBtn" class="small-btn btn-outline">Use Demo</button>
+          </div>
+          <div id="apiKeyStatus" class="api-status" style="margin-top:8px;">⚙️ Using primary API (Yahoo Finance + Fallback)</div>
+        </div>
+        <div id="apiStatus" class="api-status" style="margin-top:8px;">✅ API Ready (Multi-source: Yahoo/Alpha Vantage)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Stock Portfolio <span class="live-badge">LIVE API Integrated</span></h2>
+    <div class="stock-table-wrapper">
+      <table id="stockTable">
+        <thead>
+          <tr><th>ID</th><th>Company Name</th><th>Symbol</th><th>Current Price (USD)</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="stockTableBody">
+          <tr class="empty-row"><td colspan="5">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap:10px;">
+      <button id="refreshDisplayBtn" class="btn-secondary">🔄 Refresh Display</button>
+      <button id="syncAllStocksBtn" class="api-fetch-btn">🌍 Sync All with Live Prices</button>
+    </div>
+  </div>
+</div>
+
+<div id="messageToast" class="message-bar">✅ Message</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
