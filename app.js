@@ -27,15 +27,14 @@ const elements = {
 // ==================== UI HELPERS ====================
 function showMessage(msg, isError = false) {
   const toast = elements.messageToast;
+  if (!toast) return;
   toast.textContent = msg;
-  toast.style.backgroundColor = isError ? '#d9534f' : '#1e2f3c';
-  toast.style.opacity = '1';
-  toast.style.visibility = 'visible';
+  toast.style.backgroundColor = isError ? '#e11d48' : '#0f172a';
+  toast.classList.add('visible');
   clearTimeout(toast._timeout);
   toast._timeout = setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.visibility = 'hidden';
-  }, 3000);
+    toast.classList.remove('visible');
+  }, 3200);
 }
 
 // ==================== STOCK MANAGEMENT ====================
@@ -78,11 +77,23 @@ function updateStockPrice(stockId, newPrice) {
   return true;
 }
 
+function deleteStock(stockId) {
+  const stockIndex = stocksArray.findIndex(s => s.id === stockId);
+  if (stockIndex !== -1) {
+    const deleted = stocksArray.splice(stockIndex, 1)[0];
+    showMessage(`🗑️ Deleted "${deleted.companyName}" from portfolio`);
+    refreshCurrentView();
+    return true;
+  }
+  return false;
+}
+
 function searchStockByCompanyName(searchTerm) {
   if (!searchTerm || searchTerm.trim() === "") return [];
   const term = searchTerm.trim().toLowerCase();
   return stocksArray.filter(stock => 
-    stock.companyName.toLowerCase().includes(term)
+    stock.companyName.toLowerCase().includes(term) ||
+    stock.symbol.toLowerCase().includes(term)
   );
 }
 
@@ -92,39 +103,54 @@ function renderStockTable(stocksToRender) {
   if (!tbody) return;
   
   if (!stocksToRender || stocksToRender.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">📭 No stocks available. Add some stocks above.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">📭 No stocks available in portfolio. Add some stocks above.</td></tr>';
     return;
   }
   
   tbody.innerHTML = "";
   for (const stock of stocksToRender) {
     const row = tbody.insertRow();
-    row.insertCell(0).textContent = stock.id;
-    row.insertCell(1).textContent = stock.companyName;
-    row.insertCell(2).innerHTML = `<strong>${stock.symbol}</strong>`;
-    row.insertCell(3).innerHTML = `<span class="price-positive">$${stock.price.toFixed(2)}</span>`;
     
+    // ID
+    const cellId = row.insertCell(0);
+    cellId.textContent = `#${stock.id}`;
+    cellId.style.fontWeight = "600";
+    cellId.style.color = "#64748b";
+
+    // Company Name
+    const cellName = row.insertCell(1);
+    cellName.textContent = stock.companyName;
+    cellName.style.fontWeight = "600";
+
+    // Ticker Symbol
+    const cellSymbol = row.insertCell(2);
+    cellSymbol.innerHTML = `<span class="symbol-badge">${stock.symbol}</span>`;
+
+    // Price
+    const cellPrice = row.insertCell(3);
+    cellPrice.innerHTML = `<span class="price-display">$${stock.price.toFixed(2)}</span>`;
+    
+    // Action Cell
     const actionCell = row.insertCell(4);
     const container = document.createElement('div');
     container.style.display = 'flex';
-    container.style.gap = '8px';
+    container.style.gap = '6px';
     container.style.alignItems = 'center';
+    container.style.flexWrap = 'wrap';
     
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
     priceInput.step = '0.01';
     priceInput.placeholder = 'New price';
-    priceInput.style.padding = '6px 10px';
-    priceInput.style.borderRadius = '30px';
-    priceInput.style.border = '1px solid #ccc';
-    priceInput.style.width = '100px';
+    priceInput.style.padding = '5px 8px';
+    priceInput.style.borderRadius = '6px';
+    priceInput.style.border = '1px solid #cbd5e1';
+    priceInput.style.fontSize = '0.85rem';
+    priceInput.style.width = '95px';
     
     const updateBtn = document.createElement('button');
     updateBtn.textContent = 'Update';
-    updateBtn.style.background = '#3b7b5e';
-    updateBtn.style.padding = '4px 12px';
-    updateBtn.style.margin = '0';
-    updateBtn.style.fontSize = '0.8rem';
+    updateBtn.className = 'btn-secondary btn-small';
     
     updateBtn.onclick = (function(id) {
       return function() {
@@ -140,9 +166,20 @@ function renderStockTable(stocksToRender) {
         }
       };
     })(stock.id);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '✕';
+    deleteBtn.className = 'btn-danger btn-small';
+    deleteBtn.title = 'Delete Stock';
+    deleteBtn.onclick = (function(id) {
+      return function() {
+        deleteStock(id);
+      };
+    })(stock.id);
     
     container.appendChild(priceInput);
     container.appendChild(updateBtn);
+    container.appendChild(deleteBtn);
     actionCell.appendChild(container);
   }
 }
@@ -150,7 +187,8 @@ function renderStockTable(stocksToRender) {
 function refreshCurrentView() {
   if (activeFilteredStocks !== null && lastSearchTerm !== "") {
     const newFiltered = stocksArray.filter(s => 
-      s.companyName.toLowerCase().includes(lastSearchTerm.toLowerCase())
+      s.companyName.toLowerCase().includes(lastSearchTerm.toLowerCase()) ||
+      s.symbol.toLowerCase().includes(lastSearchTerm.toLowerCase())
     );
     activeFilteredStocks = newFiltered;
     renderStockTable(activeFilteredStocks);
@@ -196,7 +234,7 @@ function performSearch() {
 function updateStockSelectDropdown() {
   const selectEl = elements.stockSelectForUpdate;
   if (!selectEl) return;
-  selectEl.innerHTML = '<option value="">-- Choose stock --</option>';
+  selectEl.innerHTML = '<option value="">-- Choose Stock --</option>';
   stocksArray.forEach(stock => {
     const option = document.createElement('option');
     option.value = stock.id;
@@ -214,11 +252,11 @@ async function handleFetchLivePrice() {
   }
   
   const displaySpan = elements.liveQuoteDisplay;
-  displaySpan.innerHTML = '<span class="spinner-small"></span> Fetching live price via multi-source API...';
+  displaySpan.innerHTML = '<span class="spinner-small"></span> Fetching market quote...';
   
   try {
     const price = await fetchStockPrice(symbol);
-    displaySpan.innerHTML = `💰 $${price.toFixed(2)} (${symbol.toUpperCase()}) <span style="font-size:0.7rem;">✓ Real-time</span>`;
+    displaySpan.innerHTML = `💰 $${price.toFixed(2)} (${symbol.toUpperCase()}) <span style="font-size:0.75rem; color:#059669;">✓ Live Sync</span>`;
     showMessage(`Live price for ${symbol.toUpperCase()}: $${price.toFixed(2)}`);
     elements.liveSymbolInput.setAttribute('data-last-price', price);
   } catch (error) {
@@ -236,7 +274,7 @@ async function handleUpdateSelectedStock() {
   
   const symbolInput = elements.liveSymbolInput.value.trim();
   if (!symbolInput) {
-    showMessage("Please enter a stock symbol in the Live Market Price field", true);
+    showMessage("Please enter a stock symbol in the Live Ticker field", true);
     return;
   }
   
@@ -272,14 +310,14 @@ async function handleUpdateSelectedStock() {
 
 async function syncAllStocks() {
   if (stocksArray.length === 0) {
-    showMessage("No stocks to sync", true);
+    showMessage("No stocks in portfolio to sync", true);
     return;
   }
   
-  showMessage("🔄 Syncing all stocks with live market prices (multi-source)...");
+  showMessage("🔄 Syncing portfolio with live market prices...");
   const syncBtn = document.getElementById('syncAllStocksBtn');
   const originalText = syncBtn.textContent;
-  syncBtn.innerHTML = '<span class="spinner-small"></span> Syncing...';
+  syncBtn.innerHTML = '<span class="spinner-small"></span> Syncing Portfolio...';
   syncBtn.disabled = true;
   
   let updatedCount = 0;
@@ -291,7 +329,7 @@ async function syncAllStocks() {
         const livePrice = await fetchStockPrice(stock.symbol);
         stock.price = livePrice;
         updatedCount++;
-        await new Promise(resolve => setTimeout(resolve, 400));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
         failedCount++;
         console.warn(`Failed to sync ${stock.symbol}: ${error.message}`);
@@ -300,7 +338,7 @@ async function syncAllStocks() {
   }
   
   refreshCurrentView();
-  showMessage(`✅ Sync complete! ${updatedCount} stocks updated, ${failedCount} failed (using fallback)`);
+  showMessage(`✅ Sync complete! ${updatedCount} stocks updated live.`);
   
   syncBtn.innerHTML = originalText;
   syncBtn.disabled = false;
@@ -315,7 +353,7 @@ function handleSaveApiKey() {
   }
   try {
     saveApiKey(keyInput);
-    elements.apiKeyStatus.innerHTML = '🔑 Custom API key saved! Using Alpha Vantage + Yahoo.';
+    elements.apiKeyStatus.innerHTML = '🔑 Custom API key active (Alpha Vantage + Yahoo)';
     showMessage(`API key saved successfully.`);
   } catch (error) {
     showMessage(error.message, true);
@@ -325,8 +363,8 @@ function handleSaveApiKey() {
 function handleUseDemoKey() {
   useDemoMode();
   elements.alphaVantageApiKey.value = 'demo';
-  elements.apiKeyStatus.innerHTML = '⚙️ Demo mode active (Yahoo + fallback). Add real key for better limits.';
-  showMessage("Demo key active: system uses Yahoo + fallback simulation");
+  elements.apiKeyStatus.innerHTML = '⚙️ Demo mode active (Yahoo Finance + Fallback simulation)';
+  showMessage("Demo mode active: Yahoo Finance + Realistic Simulation");
 }
 
 // ==================== DEMO DATA ====================
@@ -355,7 +393,7 @@ function resetDemoData() {
   
   resetSearchAndDisplay();
   updateStockSelectDropdown();
-  showMessage("✨ Demo stocks loaded! Try fetching live prices with symbols like AAPL, TSLA, NVDA.");
+  showMessage("✨ Portfolio reloaded with top tech stocks!");
 }
 
 function manualRefresh() {
@@ -368,13 +406,13 @@ function loadSavedApiKey() {
   const status = getApiKeyStatus();
   if (status.hasKey) {
     elements.alphaVantageApiKey.value = status.key;
-    elements.apiKeyStatus.innerHTML = '🔐 Alpha Vantage key loaded. Using premium APIs.';
+    elements.apiKeyStatus.innerHTML = '🔐 Custom Alpha Vantage key loaded';
   } else if (status.isDemo) {
     elements.alphaVantageApiKey.value = 'demo';
-    elements.apiKeyStatus.innerHTML = '⚙️ Demo mode active (Yahoo + fallback)';
+    elements.apiKeyStatus.innerHTML = '⚙️ Demo mode active (Yahoo + Fallback)';
   } else {
     elements.alphaVantageApiKey.value = '';
-    elements.apiKeyStatus.innerHTML = '💡 Optional: Enter your free Alpha Vantage API key for better reliability.';
+    elements.apiKeyStatus.innerHTML = '💡 Optional: Add Alpha Vantage key for high-rate live limits';
   }
 }
 
@@ -417,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveApiKeyBtn').addEventListener('click', handleSaveApiKey);
   document.getElementById('useDemoKeyBtn').addEventListener('click', handleUseDemoKey);
   
-  // Enter key handlers
+  // Keyboard Enter handlers
   elements.searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') performSearch();
   });
